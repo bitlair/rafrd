@@ -1,0 +1,55 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          rafrd
+# Required-Start:    $network
+# Required-Stop:     $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Realtime asynchronous file replication daemon
+### END INIT INFO
+
+RAFRD="/usr/sbin/rafrd"
+RAFRD_OPTS=""
+
+# Check configuration file
+if [ ! -f /etc/csync2.cfg ]; then
+	echo "Cannot find configuration file /etc/csync2.cfg" 1>&2
+	exit 1
+fi
+if [ ! -f /etc/rafrd.conf ]; then
+	echo "Cannot find configuration file /etc/rafrd.conf" 1>&2
+	exit 1
+fi
+
+function start {
+	printf "Starting file replication daemons:"
+	if start-stop-daemon --start --quiet --oknodo --pidfile /var/run/rafrd.pid --exec "$RAFRD" -- $RAFRD_OPTS; then
+		printf " rafrd"
+	else
+		exit 2
+	fi
+	
+	printf ".\n"	
+}
+function stop {
+	printf "Stopping file replication daemons:"
+	if start-stop-daemon --stop --name rafrd --quiet --oknodo --pidfile /var/run/rafrd.pid --retry 5; then
+		printf " rafrd"
+	else
+		exit 2
+	fi
+
+	printf ".\n"	
+}
+case $1 in 
+start) start
+       ;;
+stop)  stop
+       ;;
+restart) stop
+         start
+         ;;
+*) echo "Syntax: $0 (start|stop|restart)"
+   ;;
+esac

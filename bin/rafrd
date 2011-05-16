@@ -1,0 +1,67 @@
+#!/bin/sh
+# Inotify wrapper for csync2 real time asynchronous replication.
+#
+# Copyright (C) 2011 Wilco Baan Hofman
+#
+# Inspired by a blog comment by Gerard 
+# on http://pooteeweet.org/blog/909/949#m949
+#
+# Supposed to run on all hosts that are to be synced.
+# Should not be run standalone, but in addition to a csync2 -x full sync 
+# cronjob.
+#
+# Limitations:
+# - No locking
+# - No conflict resolution (will not sync conflicting edits)
+#
+###
+# 
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#  Licensed under the GNU GPLv3 or later.
+#
+###
+PIDFILE="/var/run/rafrd.pid"
+DIRS=""
+
+# Include the configuration file
+. /etc/rafrd.conf
+
+# Check if we're already running
+if [ -s "$PIDFILE" ]; then
+	if ps h `cat "$PIDFILE"` >/dev/null; then
+		echo "Error: rafrd is already running!"
+		exit 2
+	fi
+	rm "$PIDFILE"
+fi
+
+# This hack is to get the pid of the subshell we are forking, but we only want to write it once.
+WROTEPID=0
+
+writepid() {
+	if [ "$WROTEPID" -eq "0" ];then
+		basename /proc/self/task/* > "$PIDFILE"
+	fi
+	WROTEPID=1
+}
+
+inotifywait -mrq -e close_write -e create -e delete -e move $DIRS | while { writepid ;read line; }; do
+	dir="$(echo $line|cut -d" " -f1)"
+	file="$(echo $line|cut -d" " -f3-)"
+	csync2 -x "$dir/$file"
+done >/dev/null 2>&1 & 
+
+disown
+exit 0

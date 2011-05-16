@@ -1,0 +1,2 @@
+# Every night at 23:00h, do a full sync.
+0 23	* * *	root	csync2 -x

@@ -1,0 +1,23 @@
+To install, perform the following tasks:
+
+ * Install the csync2 and inotify-tools packages
+ * Copy and configure etc/csync.cfg to /etc
+ * Copy etc/rafrd.conf to /etc/rafrd.conf
+ * Copy etc/rafrd.cron to /etc/cron.d/rafrd
+ * Copy init.d/rafrd to /etc/init.d/rafrd
+ * Copy bin/rafrd to /usr/sbin/rafrd
+ * Create symlinks for rafrd to start automatically
+ * Create a shared key with csync2 -k /etc/csync2.key 
+ * Replicate the shared key to all nodes
+ * Make sure the hostname is equal to the FQDN and not just the first part:
+ 
+# hostname -f > /etc/hostname
+# hostname fully.qualified.domain.name
+
+ * Create a certificate on all nodes:
+
+# openssl genrsa -out /etc/csync2_ssl_key.pem 1024
+# openssl req -new -key /etc/csync2_ssl_key.pem -out /etc/csync2_ssl_cert.csr
+# openssl x509 -req -days 600 -in /etc/csync2_ssl_cert.csr \
+        -signkey /etc/csync2_ssl_key.pem -out /etc/csync2_ssl_cert.pem
+
